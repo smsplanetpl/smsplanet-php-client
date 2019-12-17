@@ -1,0 +1,36 @@
+{
+    "name": "smsplanet/smsplanet-php-client",
+    "description": "Klient SMS API napisany w języku PHP, pozwalający na wysyłanie wiadomości SMS, MMS oraz korzystanie z innych funkcji dostępnych w serwisie SMSPLANET.pl",
+    "homepage": "https://github.com/smsplanetpl/smsplanet-php-client",
+    "type": "library",
+    "license": "Apache-2.0",
+    "keywords": ["api client", "sms", "mms", "smsplanet", "smsplanet.pl"],
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Paweł Feruś", 
+            "email": "pawel.ferus@agsystems.pl"
+        },
+        {
+            "name": "Krzysztof Gwiazda", 
+            "email": "krzysztof.gwiazda@agsystems.pl"
+        }
+    ],
+    "require": {
+        "php": ">=5.6",
+        "ext-dom": "*",
+        "ext-simplexml": "*",
+        "ext-fileinfo": "*",
+        "guzzlehttp/guzzle": "^6.3",
+        "nesbot/carbon": "^2.20"
+    },
+    "autoload": {
+        "psr-4": {
+            "SMSPLANET\\PHP\\": "src/"
+        }
+    },
+    "require-dev": {
+        "vlucas/phpdotenv": "^3.4",
+        "phpunit/phpunit": "^8.2"
+    }
+}
