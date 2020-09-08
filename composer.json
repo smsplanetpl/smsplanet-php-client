@@ -14,6 +14,10 @@
         {
             "name": "Krzysztof Gwiazda",
             "email": "krzysztof.gwiazda@agsystems.pl"
+        },
+        {
+            "name": "Sergij Lebedyn",
+            "email": "sergiusz.lebedyn@otostolik.pl"
         }
     ],
     "require": {
