@@ -8,20 +8,24 @@
     "version": "1.0.0",
     "authors": [
         {
-            "name": "Paweł Feruś", 
+            "name": "Paweł Feruś",
             "email": "pawel.ferus@agsystems.pl"
         },
         {
-            "name": "Krzysztof Gwiazda", 
+            "name": "Krzysztof Gwiazda",
             "email": "krzysztof.gwiazda@agsystems.pl"
+        },
+        {
+            "name": "Sergij Lebedyn",
+            "email": "sergiusz.lebedyn@otostolik.pl"
         }
     ],
     "require": {
-        "php": ">=5.6",
+        "php": ">=7.2",
         "ext-dom": "*",
         "ext-simplexml": "*",
         "ext-fileinfo": "*",
-        "guzzlehttp/guzzle": "^6.3",
+        "guzzlehttp/guzzle": "^7.0.1",
         "nesbot/carbon": "^2.20"
     },
     "autoload": {

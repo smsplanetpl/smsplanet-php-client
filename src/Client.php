@@ -4,13 +4,18 @@ namespace SMSPLANET\PHP;
 
 use Carbon\Carbon;
 use DOMDocument;
-use function GuzzleHttp\Psr7\mimetype_from_filename;
 use SMSPLANET\PHP\Client\Exceptions\InvalidParameterException;
 use SMSPLANET\PHP\Client\Exceptions\MissingParameterException;
 use SMSPLANET\PHP\Client\Exceptions\RequestException;
 
+use function GuzzleHttp\Psr7\mimetype_from_filename;
+
 class Client
 {
+    protected const API_URL = 'https://api.smsplanet.pl';
+
+    protected const REQUIRED_PARAMS = ['from', 'msg', 'to'];
+
     /** @var \GuzzleHttp\Client */
     protected $client;
 
@@ -30,7 +35,7 @@ class Client
         $this->credentials = $credentials;
 
         $this->client = new \GuzzleHttp\Client([
-            'base_uri' => 'https://api.smsplanet.pl',
+            'base_uri' => self::API_URL,
             'timeout' => 30
         ]);
     }
@@ -46,9 +51,9 @@ class Client
      */
     public function sendSimpleSMS(array $args)
     {
-        $this->checkRequestParams($args, $required_params = ['from', 'msg', 'to'], $required_params);
+        $this->checkRequestParams($args, self::REQUIRED_PARAMS, self::REQUIRED_PARAMS);
 
-        $query = $this->build_query([
+        $query = http_build_query([
             'key' => $this->credentials['key'],
             'password' => $this->credentials['password'],
             'from' => $args['from'],
@@ -74,9 +79,8 @@ class Client
      */
     public function sendSMS(array $args)
     {
-        $required_params = ['from', 'msg', 'to'];
         $optional_params = ['from', 'msg', 'to', 'date', 'clear_polish', 'test'];
-        $this->checkRequestParams($args, $required_params, $optional_params);
+        $this->checkRequestParams($args, self::REQUIRED_PARAMS, $optional_params);
         $this->getRecipientsFromRequest($args);
 
         $dataToParse = [
@@ -86,11 +90,10 @@ class Client
         ];
 
         $body = $this->arrayToXml($dataToParse, '<data/>');
-        $this->setToElementsToXml($body);
 
         $response = $this->client->post('', [
             'form_params' => [
-                'xmldata' => $body
+                'xmldata' => $this->setToElementsToXml($body)
             ]
         ]);
 
@@ -108,9 +111,8 @@ class Client
      */
     public function sendMMS(array $args)
     {
-        $required_params = ['from', 'msg', 'to'];
         $optional_params = ['from', 'msg', 'title', 'to', 'date', 'attachments', 'clear_polish', 'test'];
-        $this->checkRequestParams($args, $required_params, $optional_params);
+        $this->checkRequestParams($args, self::REQUIRED_PARAMS, $optional_params);
         $this->getRecipientsFromRequest($args);
 
         $dom = new DOMDocument('1.0', 'utf-8');
@@ -124,22 +126,26 @@ class Client
         $mms->appendChild($dom->createElement('to', ''));
         $mms->appendChild($dom->createElement('from', $args['from']));
 
-        if (isset($args['title']))
+        if (isset($args['title'])) {
             $mms->appendChild($dom->createElement('title', $args['title']));
+        }
 
         $mms->appendChild($dom->createElement('msg', $args['msg']));
 
-        if (isset($args['clear_polish']))
+        if (isset($args['clear_polish'])) {
             $mms->appendChild($dom->createElement('clear_polish', 1));
+        }
 
-        if (isset($args['date']))
+        if (isset($args['date'])) {
             $mms->appendChild($dom->createElement('date', $args['date']));
+        }
 
         $mms->appendChild($attachments = $dom->createElement('attachments'));
 
         if (isset($args['attachments'])) {
-            if (!is_array($args['attachments']))
+            if (!is_array($args['attachments'])) {
                 $args['attachments'] = [$args['attachments']];
+            }
 
             foreach ($args['attachments'] as $index => $attachment) {
                 $attachments->appendChild($att = $dom->createElement('att'));
@@ -155,17 +161,15 @@ class Client
             }
         }
 
-        if (isset($args['test']))
+        if (isset($args['test'])) {
             $mms->appendChild($dom->createElement('test', $args['test']));
+        }
 
         $body = $dom->saveXML();
-        $this->setToElementsToXml($body);
-
-        echo $body;
 
         $response = $this->client->post('', [
             'form_params' => [
-                'xmldata' => $body
+                'xmldata' => $this->setToElementsToXml($body)
             ]
         ]);
 
@@ -184,8 +188,9 @@ class Client
         $content = $response->getBody()->getContents();
         $xml = $this->parseXmlResponse($content);
 
-        if ($xml->messageId > 0)
+        if ($xml->messageId > 0) {
             return intval($xml->messageId);
+        }
 
         return null;
     }
@@ -258,7 +263,7 @@ class Client
      * @return array
      * @throws RequestException
      */
-    public function getMessageStatus($message_id)
+    public function getMessageStatus($message_id): array
     {
         $response = $this->client->post('getMessageStatus', [
             'form_params' => [
@@ -277,13 +282,14 @@ class Client
             'to' => []
         ];
 
-        list($from, $to) = preg_split("!\n\n\n!", $resultMessage);
+        [$from, $to] = preg_split("!\n\n\n!", $resultMessage);
 
         foreach (explode("\n", $from) as $line) {
             if ($line) {
-                list($key, $value) = preg_split('!:\s+!', $line);
-                if ($key == 'Data wysyłki')
+                [$key, $value] = preg_split('!:\s+!', $line);
+                if ($key == 'Data wysyłki') {
                     $value = Carbon::parse($value)->toDateTimeString();
+                }
 
                 $result['from'] += [$key => $value];
             }
@@ -295,8 +301,9 @@ class Client
             if ($line) {
                 $data = str_getcsv($line, ';', '"', '');
 
-                if ($i > 0)
+                if ($i > 0) {
                     $data[2] = Carbon::parse($data[2])->toDateTimeString();
+                }
 
                 $csv[] = $data;
             }
@@ -320,12 +327,13 @@ class Client
      * @return \SimpleXMLElement
      * @throws RequestException
      */
-    protected function parseXMLResponse($content)
+    protected function parseXMLResponse($content): \SimpleXMLElement
     {
         $xml = simplexml_load_string($content);
 
-        if ($xml->result == 'ERROR')
+        if ($xml->result == 'ERROR') {
             throw new RequestException($xml->errorMsg, intval($xml->errorCode));
+        }
 
         return $xml;
     }
@@ -339,40 +347,25 @@ class Client
      * @throws InvalidParameterException
      * @throws MissingParameterException
      */
-    protected function checkRequestParams(array &$args, array $required_params, array $optional_params)
+    protected function checkRequestParams(array &$args, array $required_params, array $optional_params): void
     {
         // Check required params
 
-        if (count($result = array_diff($required_params, array_keys($args))))
+        if (count($result = array_diff($required_params, array_keys($args)))) {
             throw new MissingParameterException(join(', ', $result));
+        }
 
         // Search invalid params
 
-        if (count($result = array_diff(array_keys($args), $optional_params)))
+        if (count($result = array_diff(array_keys($args), $optional_params))) {
             throw new InvalidParameterException(join(', ', $result));
+        }
 
         // Parse optional params
 
-        if (isset($args['date']))
+        if (isset($args['date'])) {
             $args['date'] = Carbon::parse($args['date'])->format('U');
-    }
-
-    /**
-     * Build query string
-     *
-     * @param $query_data
-     * @return string
-     */
-    protected function build_query($query_data)
-    {
-        $query = [];
-        foreach ($query_data as $name => $value) {
-            $value = (array)$value;
-            array_walk_recursive($value, function ($value) use (&$query, $name) {
-                $query[] = urlencode($name) . '=' . urlencode($value);
-            });
         }
-        return implode("&", $query);
     }
 
     /**
@@ -387,14 +380,16 @@ class Client
     {
         $_xml = $xml;
 
-        if ($_xml === null)
+        if ($_xml === null) {
             $_xml = new \SimpleXMLElement($rootElement !== null ? $rootElement : '<data/>');
+        }
 
         foreach ($array as $k => $v) {
-            if (is_array($v))
+            if (is_array($v)) {
                 $this->arrayToXml($v, $k, $_xml->addChild($k));
-            else
+            } else {
                 $_xml->addChild($k, $v);
+            }
         }
 
         return $_xml->asXML();
@@ -405,13 +400,16 @@ class Client
      *
      * @param $args
      */
-    protected function getRecipientsFromRequest(&$args)
+    protected function getRecipientsFromRequest(&$args): void
     {
         $this->recipients = [];
-        if (!is_array($args['to']))
+        if (is_array($args['to'])) {
+            foreach ($args['to'] as $to) {
+                $this->recipients[] = $to;
+            }
+        } else {
             $this->recipients[] = $args['to'];
-        else foreach ($args['to'] as $to)
-            $this->recipients[] = $to;
+        }
 
         // Clear
         $args['to'] = '';
@@ -421,13 +419,15 @@ class Client
      * Replace [to] in request
      *
      * @param $body_xml
+     * @return string
      */
-    protected function setToElementsToXml(&$body_xml)
+    protected function setToElementsToXml($body_xml): string
     {
         $toXml = '';
-        foreach ($this->recipients as $to)
+        foreach ($this->recipients as $to) {
             $toXml .= "<to>$to</to>";
+        }
 
-        $body_xml = str_replace('<to/>', $toXml, $body_xml);
+        return str_replace('<to/>', $toXml, $body_xml);
     }
 }
